@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fest Team Optimizer — Discrete Mathematics & Combinatorial Search</title>
+    <meta name="description" content="Discrete mathematics project: Optimizing team formation in college fests using permutations, combinations with constraints, conflict graph independent sets, and branch-and-bound early pruning.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- Top Navigation Header -->
+    <header class="app-header" id="appHeader">
+        <div class="header-container">
+            <div class="logo-group">
+                <div class="logo-icon">Σ</div>
+                <div>
+                    <h1 class="logo-title">Fest Team Optimizer</h1>
+                    <p class="logo-subtitle">Discrete Mathematics • Constrained Branch-and-Bound Combinatorial Engine</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-secondary" id="openMathModalBtn">Theoretical Proofs & Math</button>
+                <button class="btn btn-primary" id="optimizeBtn">
+                    <span class="btn-spinner" id="btnSpinner"></span>
+                    <span id="btnText">Run Optimization</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="main-layout" id="mainLayout">
+        
+        <!-- Left Sidebar: Controls & Constraints -->
+        <aside class="sidebar-panel card" id="controlsPanel">
+            <div class="card-header">
+                <h2 class="card-title">Constraint Parameters</h2>
+                <span class="badge badge-cyan">C(N, k) Controls</span>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label-row">
+                    <label for="teamSizeSlider">Team Size (k)</label>
+                    <span class="control-val" id="teamSizeVal">5</span>
+                </div>
+                <input type="range" id="teamSizeSlider" min="3" max="8" value="5" step="1">
+                <span class="control-hint">Cardinality |T| = k of the selected subset.</span>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label-row">
+                    <label for="minSeniorsSlider">Min Seniors (Year 3/4)</label>
+                    <span class="control-val" id="minSeniorsVal">2</span>
+                </div>
+                <input type="range" id="minSeniorsSlider" min="0" max="4" value="2" step="1">
+                <span class="control-hint">Ensures senior guidance & fest mentorship.</span>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label-row">
+                    <label for="minJuniorsSlider">Min Juniors (Year 1/2)</label>
+                    <span class="control-val" id="minJuniorsVal">1</span>
+                </div>
+                <input type="range" id="minJuniorsSlider" min="0" max="3" value="1" step="1">
+                <span class="control-hint">Guarantees pipeline training & continuity.</span>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label-row">
+                    <label for="minSkillsSlider">Min Distinct Skills</label>
+                    <span class="control-val" id="minSkillsVal">3</span>
+                </div>
+                <input type="range" id="minSkillsSlider" min="1" max="5" value="3" step="1">
+                <span class="control-hint">Cross-functional coverage (Tech, Logistics, etc.)</span>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label-row">
+                    <label for="lambdaSlider">Variance Penalty (λ)</label>
+                    <span class="control-val" id="lambdaVal">1.5</span>
+                </div>
+                <input type="range" id="lambdaSlider" min="0.0" max="4.0" value="1.5" step="0.25">
+                <span class="control-hint">f(T) = TotalScore - λ × Var(T) (balance penalty).</span>
+            </div>
+
+            <div class="control-group checkbox-group">
+                <label class="custom-checkbox">
+                    <input type="checkbox" id="runNaiveCheckbox" checked>
+                    <span class="checkmark"></span>
+                    <span class="checkbox-label">Run Naive Brute Force for benchmark</span>
+                </label>
+            </div>
+
+            <button class="btn btn-primary btn-block" id="sidebarOptimizeBtn">Apply & Re-Optimize</button>
+        </aside>
+
+        <!-- Central Dashboard Area -->
+        <section class="dashboard-content" id="dashboardContent">
+            
+            <!-- Quick Stat Performance Banners -->
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-label">Combinatorial Space C(N, k)</div>
+                    <div class="stat-value" id="statCombinations">65,780</div>
+                    <div class="stat-sub">Theoretical combinations space</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">B&B Visited Nodes</div>
+                    <div class="stat-value text-emerald" id="statNodesVisited">6</div>
+                    <div class="stat-sub" id="statNodesEliminated">99.99% branches pruned early</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">B&B Execution Time</div>
+                    <div class="stat-value text-cyan" id="statBnbTime">0.16 ms</div>
+                    <div class="stat-sub" id="statSpeedupBadge">2,940x faster than naive search</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Optimal Team Fitness</div>
+                    <div class="stat-value text-purple" id="statObjective">25.000</div>
+                    <div class="stat-sub" id="statVarianceSub">Score: 25 | Variance: 0.000</div>
+                </div>
+            </div>
+
+            <!-- Algorithm Performance Comparison Card -->
+            <div class="card comparison-card" id="comparisonCard">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Combinatorial Search Benchmarking</h2>
+                        <p class="card-subtitle">Exhaustive Leaf Verification vs. Constrained Branch-and-Bound State-Space Pruning</p>
+                    </div>
+                    <span class="speedup-pill" id="speedupPill">2,940x Speedup</span>
+                </div>
+
+                <div class="comparison-table-wrapper">
+                    <table class="data-table" id="comparisonTable">
+                        <thead>
+                            <tr>
+                                <th>Benchmark Metric</th>
+                                <th>Naive Brute Force (Generate-All)</th>
+                                <th>Branch & Bound (Early Pruned)</th>
+                                <th>Efficiency Improvement</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Combinations Space C(N, k)</strong></td>
+                                <td id="tblNaiveSpace">65,780</td>
+                                <td id="tblBnbSpace">65,780</td>
+                                <td class="text-muted">Equivalent problem universe</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Search Nodes Visited</strong></td>
+                                <td id="tblNaiveNodes">65,780</td>
+                                <td id="tblBnbNodes" class="text-emerald font-bold">6</td>
+                                <td id="tblNodeReduction" class="text-emerald font-bold">99.99% eliminated</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Leaf Teams Evaluated</strong></td>
+                                <td id="tblNaiveLeaves">65,780</td>
+                                <td id="tblBnbLeaves" class="text-emerald font-bold">1</td>
+                                <td class="text-emerald">No futile leaf checks</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Feasible Teams Found</strong></td>
+                                <td id="tblNaiveFeasible">35,567</td>
+                                <td id="tblBnbFeasible">1</td>
+                                <td class="text-cyan">Direct descent to optimum</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Execution Time</strong></td>
+                                <td id="tblNaiveTime">462.01 ms</td>
+                                <td id="tblBnbTime" class="text-cyan font-bold">0.16 ms</td>
+                                <td id="tblSpeedupFactor" class="text-cyan font-bold">2,940x faster</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Optimal Team Showcase -->
+            <div class="card team-card" id="optimalTeamCard">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Optimal Balanced Team Selected</h2>
+                        <p class="card-subtitle">Satisfies All Seniority, Juniority, Skill, and Conflict-Free Constraints</p>
+                    </div>
+                    <div class="badge-cluster">
+                        <span class="badge badge-emerald" id="teamScoreBadge">Score: 25 / 25</span>
+                        <span class="badge badge-purple" id="teamVarBadge">Variance: 0.000 (Balanced)</span>
+                    </div>
+                </div>
+
+                <!-- Team Members Grid -->
+                <div class="team-grid" id="teamMembersGrid">
+                    <!-- Populated dynamically via JS -->
+                </div>
+
+                <!-- Verification Checklist Strip -->
+                <div class="verification-strip" id="verificationStrip">
+                    <div class="verify-item">
+                        <span class="verify-icon text-emerald">✔</span>
+                        <div>
+                            <span class="verify-title">Seniors (≥ 2)</span>
+                            <span class="verify-desc" id="vSeniors">4 Seniors (Guidance)</span>
+                        </div>
+                    </div>
+                    <div class="verify-item">
+                        <span class="verify-icon text-emerald">✔</span>
+                        <div>
+                            <span class="verify-title">Juniors (≥ 1)</span>
+                            <span class="verify-desc" id="vJuniors">1 Junior (Continuity)</span>
+                        </div>
+                    </div>
+                    <div class="verify-item">
+                        <span class="verify-icon text-emerald">✔</span>
+                        <div>
+                            <span class="verify-title">Skill Diversity (≥ 3)</span>
+                            <span class="verify-desc" id="vSkills">4 Unique Skills</span>
+                        </div>
+                    </div>
+                    <div class="verify-item">
+                        <span class="verify-icon text-emerald">✔</span>
+                        <div>
+                            <span class="verify-title">Conflict Graph</span>
+                            <span class="verify-desc">Zero Incompatibilities (Independent Set)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Two-Column Row: Pruning Taxonomy & Interactive Conflict Graph -->
+            <div class="two-col-grid">
+                
+                <!-- Pruning Taxonomy Breakdown -->
+                <div class="card" id="pruningCard">
+                    <div class="card-header">
+                        <h2 class="card-title">Pruning Taxonomy Breakdown</h2>
+                        <span class="badge badge-amber" id="totalPrunedBadge">106 Branches Pruned</span>
+                    </div>
+                    <p class="section-desc">Distribution of subtrees pruned before exploring deep combinations:</p>
+
+                    <div class="pruning-list" id="pruningList">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Interactive Conflict Graph Canvas -->
+                <div class="card" id="graphCard">
+                    <div class="card-header">
+                        <div>
+                            <h2 class="card-title">Conflict Graph G_C (Independent Set)</h2>
+                            <p class="card-subtitle">Red lines = Incompatibilities. Glowing Green = Selected Team.</p>
+                        </div>
+                        <span class="badge badge-cyan" id="graphEdgeBadge">12 Conflict Edges</span>
+                    </div>
+                    <div class="graph-canvas-container">
+                        <canvas id="conflictCanvas" width="560" height="420"></canvas>
+                        <div class="graph-legend">
+                            <span class="legend-item"><span class="legend-dot dot-selected"></span> Selected Team Member</span>
+                            <span class="legend-item"><span class="legend-dot dot-unselected"></span> Candidate Pool</span>
+                            <span class="legend-item"><span class="legend-line"></span> Conflict Edge</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Full Candidate Pool Table -->
+            <div class="card" id="poolCard">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Candidate Student Pool (N = 26)</h2>
+                        <p class="card-subtitle">Search, inspect attributes, ratings, and registered conflict edges</p>
+                    </div>
+                    <div class="filter-group">
+                        <input type="text" id="poolSearchInput" placeholder="Filter by name, skill, year..." class="table-search">
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="data-table" id="poolTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Year</th>
+                                <th>Level</th>
+                                <th>Primary Skill</th>
+                                <th>Rating</th>
+                                <th>Conflict Edges</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="poolTableBody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Mathematical Foundations Modal -->
+    <div class="modal-backdrop" id="mathModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>Discrete Mathematics Foundations & Proofs</h2>
+                <button class="modal-close" id="closeMathModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h3>1. Combinations vs. Permutations: Symmetry Elimination</h3>
+                <p>Team selection is unordered: {s_a, s_b} = {s_b, s_a}. Searching permutations P(N, k) explores k! (120 for k=5) symmetrical sequences. Enforcing canonical index ordering <code>i_1 &lt; i_2 &lt; ... &lt; i_k</code> cuts the search space strictly to C(N, k) combinations.</p>
+
+                <h3>2. Internal-Node Early Pruning Mechanics</h3>
+                <p>In naive brute force, constraints are evaluated as a post-filter at the leaf nodes after all C(N, k) subsets are materialized. In contrast, early pruning operates on internal nodes of the decision tree at depth m &lt; k: pruning a partial prefix eliminates C(N - idx, k - m) potential leaves in a single O(1) step.</p>
+
+                <h3>3. Conflict Graphs & Independent Sets</h3>
+                <p>Let G_C = (V, E) be the conflict graph. A conflict-free team T is an Independent (Stable) Set in G_C. Candidate lookahead ensures no two vertices in T share an edge: <code>∀ u, v ∈ T (u ≠ v) ⇒ (u, v) ∉ E_C</code>.</p>
+
+                <h3>4. Multi-Objective Variance Penalty</h3>
+                <p>Objective function: <code>f(T) = TotalScore(T) - λ · Var(T)</code>. For two teams with sum 21, [5,5,5,5,1] has variance 2.56, while [4,4,4,4,5] has variance 0.16. With λ=1.5, the cohesive balanced team wins decisively.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Scripts -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
